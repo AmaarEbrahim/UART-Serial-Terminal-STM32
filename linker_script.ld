@@ -4,9 +4,11 @@ MEMORY {
 }
 
 SECTIONS {
+    .vector_core : {
+        KEEP(*(.vector_core))
+    } > FLASH
     .text : {
         _s_text = .;
-        KEEP(*(.vector_core))
         *(.text)
         _e_text = .;
     } > FLASH
@@ -24,6 +26,7 @@ SECTIONS {
         *(.data*)
         _e_data = .;
     } > SRAM AT> FLASH
+    data_load_addr = LOADADDR(.data);
     .bss : {
         . = ALIGN(4);
         _s_bss = .;
@@ -31,4 +34,6 @@ SECTIONS {
         *(.bss*)
         _e_bss = .;
     } > SRAM
+
+    _stack_start = ORIGIN(SRAM) + LENGTH(SRAM);
 }
