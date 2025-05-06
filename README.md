@@ -9,6 +9,9 @@ Here are some things I want to showcase in this project:
 5. Custom scripts to interact with the microcontroller through OpenOCD
 6. Things I have learned while working on the project explained in clear, concise English.
 
+# Credits
+Big thanks to [OurEmbeddeds](https://ourembeddeds.github.io/). I made use of some code from two of their articles: "Armv7 Startup (2) - Linker Script" and "Armv7 Startup" for my linker script and startup file.
+
 # ARM Header Files
 I am using header files from ARM's CMSIS-Device and Core libraries. ST has those header files online in a couple of their GitHub repositories. These links take you to the repos I found the header files in:
 1. https://github.com/STMicroelectronics/STM32CubeL0 (Core)
@@ -83,3 +86,41 @@ OBJS=$(patsubst src/%.c, obj/%.o, $(SRCS))
 
 It seems like wildcard and patsubst are "functions". Arguments are passed in as comma-delimited values. You can use * to capture all values in a path. You can use % as a parameter
 name. 
+
+# Linker Script
+The linker script has two segments: FLASH and SRAM. Here's how my linker script defines these two regions
+```ld
+MEMORY {
+    SRAM (rw) : ORIGIN = 0x20000000, LENGTH = 20K 
+    FLASH (rw) : ORIGIN = 0x08000000, LENGTH = 192K
+}
+```
+The origin and length come from the datasheet and reference manual.
+
+My linker script also creates four sections: .text, .rodata, .data, and .bss. The .text section is filled by the vector table and code. Here is how I define it:
+```ld
+SECTIONS {
+    .text : {
+        _s_text = .;
+        KEEP(*(.vector_core))
+        *(.text)
+        _e_text = .;
+    } > FLASH
+
+	...
+
+}
+```
+KEEP makes sure that the linker doesn't discard a section even if symbols within the section don't get used.
+
+To help my startup file copy over the .data section from flash to SRAM, the following line is in the linker script:
+```ld
+data_load_addr = LOADADDR(.data);
+```
+This above line stores the address that the .data section gets loaded to (ie. in flash), allowing my startup file to locate the beginning of where it must copy from.
+
+Additionally, there is a line in the linker script that stores the initial value of the stack pointer:
+```ld
+_stack_start = ORIGIN(SRAM) + LENGTH(SRAM);
+```
+It creates a variable that points to the very top of SRAM. My startup file sets _stack_start as the first element of the vector table.
